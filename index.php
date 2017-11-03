@@ -1,4 +1,14 @@
 <?php
+    // references -> http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
+    
+    // key-64 and M(Message) must be random.
+    // in particular, M is able to be shorter or much better longer than 64-bit (maybe cutting and fetching is needed)
+    // key = 0x133457799BBCDFF1
+    $key_64 = array(0,0,0,1,0,0,1,1,0,0,1,1,0,1,0,0,0,1,0,1,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,1,1,0,1,1,1,0,1,1,1,1,0,0,1,1,0,1,1,1,1,1,1,1,1,1,0,0,0,1);
+    // message = 0x0123456789ABCDEF
+    $M = array(0,0,0,0,0,0,0,1,0,0,1,0,0,0,1,1,0,1,0,0,0,1,0,1,0,1,1,0,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,1,0,1,1,1,1,0,0,1,1,0,1,1,1,1,0,1,1,1,1,);
+
+
     // Initial permutation (IP)
     $IP = array(58, 50, 42, 34, 26, 18, 10, 2,
                 60, 52, 44, 36, 28, 20, 12, 4,
@@ -113,6 +123,7 @@
       return $key_array;
     }
 
+    // 56-bit key permutate
     function permutate_key($key_64, $PC1){
       $permutated_key = array();
 
@@ -125,6 +136,8 @@
       return $permutated_key;
     }
 
+    // devide 56-bit key into C and D array
+    // two function is slightly different. (index)
     function init_C($key_56){
       $C = array();
       for($i=0; $i<28; $i++){
@@ -133,7 +146,6 @@
 
       return $C;
     }
-
     function init_D($key_56){
       $D = array();
       for($i=0; $i<28; $i++){
@@ -143,12 +155,14 @@
       return $D;
     }
     
+    // for rotate
     function shift_left_rotate($CorD){
       $shifted = array_shift($CorD);
       array_push($CorD, $shifted);
       return $CorD;
     }
 
+    // apply rotational shift to C and D array
     function shift_left_CD($CorD, $shift_schedule){
       $arr[16][28] = array();
       for($i=0; $i<28; $i++){
@@ -175,6 +189,7 @@
       return $arr;
     }
 
+    // merge C and D array and permutate for generate K_16 array
     function init_K($C_16, $D_16, $PC2){
       $K_16[16][48] = array();
       $temp[16][56] = array();
@@ -200,17 +215,70 @@
       return $K_16;
     }
 
-    // main
+    function permutate_M($M, $IP){
+      $IP_M = array();
 
-    // random 64-bit key
-    // references -> http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
-    $key_64 = array(0,0,0,1,0,0,1,1,0,0,1,1,0,1,0,0,0,1,0,1,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,1,1,0,1,1,1,0,1,1,1,1,0,0,1,1,0,1,1,1,1,1,1,1,1,1,0,0,0,1);
+      for($i=0; $i<64; $i++){
+        // index must minus 1 !!
+        $IP_M[$i] = $M[$IP[$i]-1];
+      }
+
+      return $IP_M;
+    }
+
+    // devide 64-bit message into L and R array
+    // two function is slightly different. (index)
+    function init_L($IP_M){
+      $L = array();
+      for($i=0; $i<32; $i++){
+        $L[$i] = $IP_M[$i];
+      }
+
+      return $L;
+    }
+    function init_R($IP_M){
+      $R = array();
+      for($i=0; $i<32; $i++){
+        $R[$i] = $IP_M[32+$i];
+      }
+
+      return $R;
+    }
+
+    // R bit expansion refer to E BIT-SELECTION
+    function bit_expansion($R, $E){
+      $EXP_R = array();
+
+      for($i=0; $i<48; $i++){
+        $EXP_R[$i] = $R[$E[$i]-1];
+      }
+
+      return $EXP_R;
+    }
+
+    // Feistel rotation
+    function feistel_rotation($L, $R, $K_16){
+
+    }
+
+
+
+
+
+    /* * * * * * * * * * * * * * * * * * * */
+    /*             for test                */      
+    /* * * * * * * * * * * * * * * * * * * */
+
     $key_56 = permutate_key($key_64,$PC1);
     $C = init_C($key_56);
     $D = init_D($key_56);
     $C_16 = shift_left_CD($C, $shift_schedule);
     $D_16 = shift_left_CD($D, $shift_schedule);
     $K_16 = init_K($C_16, $D_16, $PC2);
+    $IP_M = permutate_M($M, $IP);
+    $L = init_L($IP_M);
+    $R = init_R($IP_M);
+    $EXP_R = bit_expansion($R, $E);
 
     foreach($key_64 as $value){
       echo $value;
@@ -251,4 +319,26 @@
         echo $K_16[$i][$j];
       }
     }
+    echo "<br/>";
+    echo "<br/>M : ";
+    foreach($M as $value){
+      echo $value;
+    }echo "<br/>IP_M : ";
+    foreach($IP_M as $value){
+      echo $value;
+    }
+    echo "<br/>";
+    echo "<br/>L0 : ";
+     foreach($L as $value){
+      echo $value;
+    }
+    echo "<br/>R0 : ";
+    foreach($R as $value){
+      echo $value;
+    }
+    echo "<br/>E(R0) : ";
+    foreach($EXP_R as $value){
+      echo $value;
+    }
+
 ?>
